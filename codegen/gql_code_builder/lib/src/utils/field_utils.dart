@@ -12,15 +12,15 @@ import "type_utils.dart";
 /// Creates Method objects that represent getters for each field in the selection.
 /// Handles duplicate fields and manages overrides for inheritance.
 List<Method> buildFieldGetters(
-  List<SelectionNode> selections,
-  SourceNode schemaSource,
-  String type,
-  Map<String, Reference> typeOverrides,
-  Map<String, Reference> dataClassAliasMap,
-  String name,
-  bool built,
-  Set<SelectionNode> superclassSelectionNodes,
-) {
+    List<SelectionNode> selections,
+    SourceNode schemaSource,
+    String type,
+    Map<String, Reference> typeOverrides,
+    Map<String, Reference> dataClassAliasMap,
+    String name,
+    bool built,
+    Set<SelectionNode> superclassSelectionNodes,
+    ) {
   // Track fields we've already processed to avoid duplicates
   final processedFieldsMap = <String, Method>{};
 
@@ -45,7 +45,7 @@ List<Method> buildFieldGetters(
 
     // Check if this field should override a superclass field
     final isOverride = superclassSelectionNodes.any(
-        (s) => s is FieldNode && (s.alias?.value ?? s.name.value) == fieldName);
+            (s) => s is FieldNode && (s.alias?.value ?? s.name.value) == fieldName);
 
     final method = buildGetter(
       nameNode: nameNode,
@@ -53,9 +53,9 @@ List<Method> buildFieldGetters(
       schemaSource: schemaSource,
       typeOverrides: typeOverrides,
       typeRefAlias:
-          dataClassAliasMap[builtClassName("${name}_${nameNode.value}")],
+      dataClassAliasMap[builtClassName("${name}_${nameNode.value}")],
       typeRefPrefix:
-          selection.selectionSet != null ? builtClassName(name) : null,
+      selection.selectionSet != null ? builtClassName(name) : null,
       built: built,
       isOverride: isOverride,
     );
@@ -72,11 +72,11 @@ List<Method> buildFieldGetters(
 /// Creates a map of superclass selections based on the current selections and
 /// any fragment spreads. Handles nested fragment interfaces appropriately.
 Map<String, SourceSelections> processSuperclassSelections(
-  List<SelectionNode> selections,
-  DocumentNode document,
-  Map<String, SourceSelections> superclassSelections,
-  Map<String, SourceSelections> fragmentMap,
-) {
+    List<SelectionNode> selections,
+    DocumentNode document,
+    Map<String, SourceSelections> superclassSelections,
+    Map<String, SourceSelections> fragmentMap,
+    ) {
   final Map<String, SourceSelections> nestedSuperclassSelections = {
     ...superclassSelections
   };
@@ -118,12 +118,12 @@ Map<String, SourceSelections> processSuperclassSelections(
 /// For nested interfaces like "__asHuman_friends", this adds the appropriate
 /// superclass relationships based on type conditions.
 void _processNestedTypeInterfaces(
-  SelectionNode selection,
-  DocumentNode document,
-  Map<String, SourceSelections> superclassSelections,
-  Map<String, SourceSelections> nestedSuperclassSelections,
-  Map<String, SourceSelections> fragmentMap,
-) {
+    SelectionNode selection,
+    DocumentNode document,
+    Map<String, SourceSelections> superclassSelections,
+    Map<String, SourceSelections> nestedSuperclassSelections,
+    Map<String, SourceSelections> fragmentMap,
+    ) {
   if (selection is! FieldNode) return;
 
   final containingFragment = getContainingInlineFragment(selection, document);
@@ -157,7 +157,7 @@ void _processNestedTypeInterfaces(
 
       // Check if interface exists in fragment map
       final bool hasNestedInterface = fragmentMap.entries.any((entry) =>
-          entry.key.contains(fieldName) && entry.value.selections.isNotEmpty);
+      entry.key.contains(fieldName) && entry.value.selections.isNotEmpty);
 
       if (hasNestedInterface) {
         // Add nested interface with consistent naming
@@ -181,9 +181,9 @@ void _processNestedTypeInterfaces(
 /// Creates a map of fragment selections specific to a field, supporting
 /// nested fragment implementations.
 Map<String, SourceSelections> fragmentSelectionsForField(
-  Map<String, SourceSelections> fragmentMap,
-  FieldNode field,
-) {
+    Map<String, SourceSelections> fragmentMap,
+    FieldNode field,
+    ) {
   final result = <String, SourceSelections>{};
   final fieldKey = field.alias?.value ?? field.name.value;
 
@@ -194,7 +194,7 @@ Map<String, SourceSelections> fragmentSelectionsForField(
 
     // Look for matching fields in fragment selections
     for (final selection
-        in sourceSelections.selections.whereType<FieldNode>()) {
+    in sourceSelections.selections.whereType<FieldNode>()) {
       if (selection.selectionSet == null) continue;
 
       final selectionKey = selection.alias?.value ?? selection.name.value;
@@ -222,12 +222,19 @@ Map<String, SourceSelections> fragmentSelectionsForField(
     if (sourceSelections.url == null) continue;
 
     if (superName.contains("__as")) {
-      final baseFragmentName = superName.split("__as").first;
-      final typeName = superName.split("__as").last.split("_").first;
+      final superNameParts = superName.split("__as");
+      final baseFragmentName = superNameParts.first;
+      final typeNameParts = superNameParts.last.split("_");
+      final typeName = typeNameParts.first;
+
+      // keep the infix so this works with multiple levels of nested, named fragments
+      final fieldParts = typeNameParts.sublist(1).toList(growable: true);
+      fieldParts.add(fieldKey);
+      final fieldPath = fieldParts.join("_");
 
       // Check for nested interface from named fragment
       final potentialNestedName =
-          "${baseFragmentName}__as${typeName}_${fieldKey}";
+          "${baseFragmentName}__as${typeName}_${fieldPath}";
 
       if (fragmentMap.containsKey(superName)) {
         result[potentialNestedName] = SourceSelections(
